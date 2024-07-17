@@ -1,5 +1,6 @@
 const express = require('express');
 const app = express();
+const jwt = require("jsonwebtoken");
 const cors = require('cors');
 const port = process.env.PORT || 5000;
 require('dotenv').config();
@@ -22,8 +23,19 @@ const client = new MongoClient(uri, {
 });
 
 async function run() {
+  const usersCollections = client.db("pocket-bank").collection("usersCollections");
   try {
     await client.connect();
+
+
+    // jwt
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "8h",
+      });
+      res.send({ token });
+    });
 
     app.get('/', (req, res)=>{
         res.send('bank running')
@@ -32,7 +44,12 @@ async function run() {
     // registration user api
     app.post('/users', async(req, res)=>{
       const user = req.body
-      console.log(user);
+      const result = await usersCollections.insertOne(user)
+      res.send(result)
+    })
+    app.get('/users', async(req, res)=>{
+      const result = await usersCollections.find().toArray()
+      res.send(result)
     })
 
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
